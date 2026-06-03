@@ -1,0 +1,30 @@
+# Rails / Ruby
+/.bundle/
+/vendor/bundle/
+/log/*
+/tmp/*
+!/log/.keep
+!/tmp/.keep
+
+# Environment and credentials
+.env
+.env.*
+!.env.example
+/config/master.key
+
+# Databases and local storage
+/db/*.sqlite3
+/db/*.sqlite3-*
+/storage/*
+!/storage/.keep
+
+# Generated assets
+/public/assets/
+/public/packs/
+/public/packs-test/
+/node_modules/
+
+# OS and editor files
+.DS_Store
+.idea/
+.vscode/
