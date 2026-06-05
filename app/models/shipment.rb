@@ -27,6 +27,14 @@ class Shipment < ApplicationRecord
     purchase_order&.master_agreement
   end
 
+  def workflow_documents
+    return shipment_documents unless master_agreement
+
+    organization.shipment_documents
+                .where(shipment_id: id)
+                .or(organization.shipment_documents.where(documentable: master_agreement))
+  end
+
   private
 
     def purchase_order_belongs_to_organization
@@ -37,6 +45,6 @@ class Shipment < ApplicationRecord
     end
 
     def create_workflow
-      CreateShipmentWorkflow.call(self)
+      CreateShipmentWorkflow.call!(self)
     end
 end

@@ -33,8 +33,9 @@ class SourceOfTruthCheck < ApplicationRecord
     def documents_belong_to_shipment
       [ authoritative_shipment_document, target_shipment_document ].compact.each do |document|
         next if shipment_id.blank? || document.shipment_id == shipment_id
+        next if document.agreement_level? && document.documentable_id == shipment.master_agreement&.id
 
-        errors.add(:base, "shipment documents must belong to the checked shipment")
+        errors.add(:base, "shipment documents must belong to the checked workflow context")
       end
     end
 end

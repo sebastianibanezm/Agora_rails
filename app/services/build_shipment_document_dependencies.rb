@@ -1,5 +1,9 @@
 class BuildShipmentDocumentDependencies
   def self.call(shipment)
+    ServiceResult.capture { call!(shipment) }
+  end
+
+  def self.call!(shipment)
     new(shipment).call
   end
 
@@ -32,7 +36,7 @@ class BuildShipmentDocumentDependencies
     attr_reader :shipment, :organization
 
     def documents_for(template)
-      shipment.shipment_documents.where(document_template: template).to_a
+      shipment.workflow_documents.where(document_template: template).to_a
     end
 
     def find_or_create_dependency(dependent_document, prerequisite_document)

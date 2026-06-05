@@ -14,6 +14,14 @@ Rails.application.routes.draw do
     get    "login", to: "sessions#new",     as: :new_login
     post   "login", to: "sessions#create",  as: :login
     delete "login", to: "sessions#destroy", as: :destroy_login
+    resources :master_agreements, only: %i[index show] do
+      resources :master_agreement_documents, only: %i[create] do
+        post :extract, on: :member
+        patch :review, on: :member
+      end
+      resources :master_agreement_extracted_values, only: %i[update]
+      resources :master_agreement_product_price_lines, only: %i[update]
+    end
     resources :shipments, only: %i[index show] do
       post :validate_source_of_truth, on: :member
     end
@@ -21,7 +29,7 @@ Rails.application.routes.draw do
       post :approve, on: :member
       post :waive, on: :member
     end
-    root "dashboard#index", as: :org_root
+    root "master_agreements#index", as: :org_root
   end
 
   get "up" => "rails/health#show", as: :rails_health_check

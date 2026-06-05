@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_06_03_000000) do
+ActiveRecord::Schema[8.1].define(version: 2026_06_05_120000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -115,6 +115,229 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_03_000000) do
     t.index ["workflow_phase_id"], name: "index_document_templates_on_workflow_phase_id"
   end
 
+  create_table "master_agreement_clauses", force: :cascade do |t|
+    t.decimal "confidence", precision: 5, scale: 4
+    t.datetime "created_at", null: false
+    t.bigint "master_agreement_document_id", null: false
+    t.bigint "master_agreement_id", null: false
+    t.jsonb "obligations", default: [], null: false
+    t.bigint "organization_id", null: false
+    t.string "review_status", default: "pending_review", null: false
+    t.string "section_number", null: false
+    t.integer "source_page"
+    t.text "summary"
+    t.string "title", null: false
+    t.datetime "updated_at", null: false
+    t.index ["master_agreement_document_id"], name: "index_master_agreement_clauses_on_master_agreement_document_id"
+    t.index ["master_agreement_id"], name: "index_master_agreement_clauses_on_master_agreement_id"
+    t.index ["organization_id", "master_agreement_document_id", "section_number"], name: "idx_ma_clauses_section"
+    t.index ["organization_id"], name: "index_master_agreement_clauses_on_organization_id"
+    t.index ["review_status"], name: "index_master_agreement_clauses_on_review_status"
+  end
+
+  create_table "master_agreement_contacts", force: :cascade do |t|
+    t.text "address"
+    t.decimal "confidence", precision: 5, scale: 4
+    t.string "contact_type", null: false
+    t.datetime "created_at", null: false
+    t.string "email"
+    t.bigint "master_agreement_document_id"
+    t.bigint "master_agreement_id", null: false
+    t.string "name"
+    t.bigint "organization_id", null: false
+    t.string "party_role"
+    t.string "phone"
+    t.string "review_status", default: "pending_review", null: false
+    t.integer "source_page"
+    t.string "title"
+    t.datetime "updated_at", null: false
+    t.index ["master_agreement_document_id"], name: "idx_on_master_agreement_document_id_709c17c417"
+    t.index ["master_agreement_id"], name: "index_master_agreement_contacts_on_master_agreement_id"
+    t.index ["organization_id", "master_agreement_id", "contact_type"], name: "idx_ma_contacts_type"
+    t.index ["organization_id"], name: "index_master_agreement_contacts_on_organization_id"
+    t.index ["review_status"], name: "index_master_agreement_contacts_on_review_status"
+  end
+
+  create_table "master_agreement_delivery_locations", force: :cascade do |t|
+    t.text "address"
+    t.string "city"
+    t.string "code"
+    t.decimal "confidence", precision: 5, scale: 4
+    t.string "country"
+    t.datetime "created_at", null: false
+    t.bigint "master_agreement_id", null: false
+    t.bigint "master_agreement_schedule_id", null: false
+    t.string "name", null: false
+    t.bigint "organization_id", null: false
+    t.string "postal_code"
+    t.string "review_status", default: "pending_review", null: false
+    t.integer "source_page"
+    t.string "state_region"
+    t.datetime "updated_at", null: false
+    t.index ["master_agreement_id"], name: "idx_on_master_agreement_id_d0e4025f2f"
+    t.index ["master_agreement_schedule_id"], name: "idx_on_master_agreement_schedule_id_636cd6ff5d"
+    t.index ["organization_id", "master_agreement_schedule_id", "name"], name: "idx_ma_locations_schedule_name"
+    t.index ["organization_id"], name: "index_master_agreement_delivery_locations_on_organization_id"
+    t.index ["review_status"], name: "index_master_agreement_delivery_locations_on_review_status"
+  end
+
+  create_table "master_agreement_documents", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "document_kind", null: false
+    t.string "docusign_envelope_id"
+    t.string "docusign_originator_email"
+    t.string "docusign_originator_name"
+    t.string "docusign_status"
+    t.string "docusign_subject"
+    t.string "docusign_time_zone"
+    t.date "effective_on"
+    t.date "expires_on"
+    t.jsonb "extracted_data", default: {}, null: false
+    t.text "extracted_text"
+    t.text "extraction_error"
+    t.string "extraction_status", default: "not_started", null: false
+    t.bigint "master_agreement_id", null: false
+    t.bigint "organization_id", null: false
+    t.datetime "reviewed_at"
+    t.bigint "reviewed_by_id"
+    t.string "title", null: false
+    t.datetime "updated_at", null: false
+    t.index ["docusign_envelope_id"], name: "index_master_agreement_documents_on_docusign_envelope_id"
+    t.index ["extraction_status"], name: "index_master_agreement_documents_on_extraction_status"
+    t.index ["master_agreement_id"], name: "index_master_agreement_documents_on_master_agreement_id"
+    t.index ["organization_id", "master_agreement_id", "document_kind"], name: "idx_ma_docs_on_agreement_kind"
+    t.index ["organization_id"], name: "index_master_agreement_documents_on_organization_id"
+    t.index ["reviewed_by_id"], name: "index_master_agreement_documents_on_reviewed_by_id"
+  end
+
+  create_table "master_agreement_extracted_values", force: :cascade do |t|
+    t.decimal "confidence", precision: 5, scale: 4
+    t.datetime "created_at", null: false
+    t.string "field_key", null: false
+    t.string "label", null: false
+    t.bigint "master_agreement_document_id", null: false
+    t.bigint "master_agreement_id", null: false
+    t.jsonb "normalized_value", default: {}, null: false
+    t.bigint "organization_id", null: false
+    t.integer "page_number"
+    t.string "raw_value"
+    t.string "review_status", default: "pending_review", null: false
+    t.datetime "reviewed_at"
+    t.bigint "reviewed_by_id"
+    t.string "source_label"
+    t.datetime "updated_at", null: false
+    t.index ["master_agreement_document_id"], name: "idx_on_master_agreement_document_id_88159d3277"
+    t.index ["master_agreement_id"], name: "index_master_agreement_extracted_values_on_master_agreement_id"
+    t.index ["organization_id", "master_agreement_document_id", "field_key", "source_label", "page_number"], name: "idx_ma_values_source"
+    t.index ["organization_id"], name: "index_master_agreement_extracted_values_on_organization_id"
+    t.index ["review_status"], name: "index_master_agreement_extracted_values_on_review_status"
+    t.index ["reviewed_by_id"], name: "index_master_agreement_extracted_values_on_reviewed_by_id"
+  end
+
+  create_table "master_agreement_parties", force: :cascade do |t|
+    t.decimal "confidence", precision: 5, scale: 4
+    t.datetime "created_at", null: false
+    t.string "legal_name"
+    t.bigint "master_agreement_document_id"
+    t.bigint "master_agreement_id", null: false
+    t.string "name", null: false
+    t.bigint "organization_id", null: false
+    t.string "party_role", null: false
+    t.string "review_status", default: "pending_review", null: false
+    t.integer "source_page"
+    t.string "state_of_incorporation"
+    t.datetime "updated_at", null: false
+    t.index ["master_agreement_document_id"], name: "index_master_agreement_parties_on_master_agreement_document_id"
+    t.index ["master_agreement_id"], name: "index_master_agreement_parties_on_master_agreement_id"
+    t.index ["organization_id", "master_agreement_id", "party_role", "name"], name: "idx_ma_parties_role_name"
+    t.index ["organization_id"], name: "index_master_agreement_parties_on_organization_id"
+    t.index ["review_status"], name: "index_master_agreement_parties_on_review_status"
+  end
+
+  create_table "master_agreement_product_price_lines", force: :cascade do |t|
+    t.integer "case_pack"
+    t.decimal "confidence", precision: 5, scale: 4
+    t.datetime "created_at", null: false
+    t.string "currency"
+    t.bigint "master_agreement_id", null: false
+    t.bigint "master_agreement_schedule_id", null: false
+    t.bigint "organization_id", null: false
+    t.string "participating_company", null: false
+    t.string "product_description", null: false
+    t.string "review_status", default: "pending_review", null: false
+    t.decimal "size", precision: 12, scale: 3
+    t.integer "source_page"
+    t.decimal "unit_cost_delivered", precision: 15, scale: 4
+    t.string "uom"
+    t.datetime "updated_at", null: false
+    t.index ["master_agreement_id"], name: "idx_on_master_agreement_id_9359b53ad5"
+    t.index ["master_agreement_schedule_id"], name: "idx_on_master_agreement_schedule_id_fcb53de0c7"
+    t.index ["organization_id", "master_agreement_schedule_id", "participating_company", "product_description"], name: "idx_ma_price_lines_product"
+    t.index ["organization_id"], name: "index_master_agreement_product_price_lines_on_organization_id"
+    t.index ["review_status"], name: "index_master_agreement_product_price_lines_on_review_status"
+  end
+
+  create_table "master_agreement_schedules", force: :cascade do |t|
+    t.decimal "confidence", precision: 5, scale: 4
+    t.datetime "created_at", null: false
+    t.string "currency"
+    t.text "delivery_terms"
+    t.string "distributors", default: [], null: false, array: true
+    t.date "effective_on"
+    t.date "expires_on"
+    t.date "first_delivery_on"
+    t.text "incentives"
+    t.integer "lead_time_days"
+    t.string "lead_time_description"
+    t.bigint "master_agreement_document_id", null: false
+    t.bigint "master_agreement_id", null: false
+    t.bigint "organization_id", null: false
+    t.string "pallet_requirements", default: [], null: false, array: true
+    t.string "participating_companies", default: [], null: false, array: true
+    t.string "payment_terms"
+    t.text "pricing_adjustment_terms"
+    t.string "product_category"
+    t.string "review_status", default: "pending_review", null: false
+    t.string "schedule_number"
+    t.integer "source_page"
+    t.text "specifications_reference"
+    t.string "title", null: false
+    t.text "unsaleables_terms"
+    t.datetime "updated_at", null: false
+    t.index ["master_agreement_document_id"], name: "idx_on_master_agreement_document_id_2a32cafb8f"
+    t.index ["master_agreement_id"], name: "index_master_agreement_schedules_on_master_agreement_id"
+    t.index ["organization_id", "master_agreement_id", "title"], name: "idx_ma_schedules_title"
+    t.index ["organization_id"], name: "index_master_agreement_schedules_on_organization_id"
+    t.index ["review_status"], name: "index_master_agreement_schedules_on_review_status"
+  end
+
+  create_table "master_agreement_signers", force: :cascade do |t|
+    t.string "company"
+    t.decimal "confidence", precision: 5, scale: 4
+    t.datetime "created_at", null: false
+    t.datetime "disclosure_accepted_at"
+    t.string "email"
+    t.string "ip_address"
+    t.bigint "master_agreement_document_id", null: false
+    t.bigint "master_agreement_id", null: false
+    t.string "name", null: false
+    t.bigint "organization_id", null: false
+    t.string "party_role", null: false
+    t.string "review_status", default: "pending_review", null: false
+    t.datetime "sent_at"
+    t.string "signature_method"
+    t.datetime "signed_at"
+    t.integer "source_page"
+    t.string "title"
+    t.datetime "updated_at", null: false
+    t.datetime "viewed_at"
+    t.index ["master_agreement_document_id"], name: "index_master_agreement_signers_on_master_agreement_document_id"
+    t.index ["master_agreement_id"], name: "index_master_agreement_signers_on_master_agreement_id"
+    t.index ["organization_id", "master_agreement_document_id", "party_role", "name"], name: "idx_ma_signers_role_name"
+    t.index ["organization_id"], name: "index_master_agreement_signers_on_organization_id"
+    t.index ["review_status"], name: "index_master_agreement_signers_on_review_status"
+  end
+
   create_table "master_agreements", force: :cascade do |t|
     t.string "agreement_number", null: false
     t.datetime "created_at", null: false
@@ -217,10 +440,12 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_03_000000) do
 
   create_table "sessions", force: :cascade do |t|
     t.datetime "created_at", null: false
+    t.datetime "expires_at", null: false
     t.string "ip_address"
     t.datetime "updated_at", null: false
     t.string "user_agent"
     t.bigint "user_id", null: false
+    t.index ["expires_at"], name: "index_sessions_on_expires_at"
     t.index ["user_id"], name: "index_sessions_on_user_id"
   end
 
@@ -286,6 +511,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_03_000000) do
     t.text "waiver_reason"
     t.index ["document_template_id"], name: "index_shipment_documents_on_document_template_id"
     t.index ["documentable_type", "documentable_id"], name: "idx_on_documentable_type_documentable_id_9226196b30"
+    t.index ["organization_id", "document_template_id", "documentable_type", "documentable_id"], name: "idx_shipment_documents_unique_master_agreement_doc", unique: true, where: "((documentable_type)::text = 'MasterAgreement'::text)"
     t.index ["organization_id", "shipment_id", "document_template_id", "documentable_type", "documentable_id"], name: "idx_shipment_documents_unique_instance", unique: true
     t.index ["organization_id"], name: "index_shipment_documents_on_organization_id"
     t.index ["shipment_id"], name: "index_shipment_documents_on_shipment_id"
@@ -453,6 +679,34 @@ ActiveRecord::Schema[8.1].define(version: 2026_06_03_000000) do
   add_foreign_key "document_template_fields", "organizations"
   add_foreign_key "document_templates", "organizations"
   add_foreign_key "document_templates", "workflow_phases"
+  add_foreign_key "master_agreement_clauses", "master_agreement_documents"
+  add_foreign_key "master_agreement_clauses", "master_agreements"
+  add_foreign_key "master_agreement_clauses", "organizations"
+  add_foreign_key "master_agreement_contacts", "master_agreement_documents"
+  add_foreign_key "master_agreement_contacts", "master_agreements"
+  add_foreign_key "master_agreement_contacts", "organizations"
+  add_foreign_key "master_agreement_delivery_locations", "master_agreement_schedules"
+  add_foreign_key "master_agreement_delivery_locations", "master_agreements"
+  add_foreign_key "master_agreement_delivery_locations", "organizations"
+  add_foreign_key "master_agreement_documents", "master_agreements"
+  add_foreign_key "master_agreement_documents", "organizations"
+  add_foreign_key "master_agreement_documents", "users", column: "reviewed_by_id"
+  add_foreign_key "master_agreement_extracted_values", "master_agreement_documents"
+  add_foreign_key "master_agreement_extracted_values", "master_agreements"
+  add_foreign_key "master_agreement_extracted_values", "organizations"
+  add_foreign_key "master_agreement_extracted_values", "users", column: "reviewed_by_id"
+  add_foreign_key "master_agreement_parties", "master_agreement_documents"
+  add_foreign_key "master_agreement_parties", "master_agreements"
+  add_foreign_key "master_agreement_parties", "organizations"
+  add_foreign_key "master_agreement_product_price_lines", "master_agreement_schedules"
+  add_foreign_key "master_agreement_product_price_lines", "master_agreements"
+  add_foreign_key "master_agreement_product_price_lines", "organizations"
+  add_foreign_key "master_agreement_schedules", "master_agreement_documents"
+  add_foreign_key "master_agreement_schedules", "master_agreements"
+  add_foreign_key "master_agreement_schedules", "organizations"
+  add_foreign_key "master_agreement_signers", "master_agreement_documents"
+  add_foreign_key "master_agreement_signers", "master_agreements"
+  add_foreign_key "master_agreement_signers", "organizations"
   add_foreign_key "master_agreements", "organizations"
   add_foreign_key "master_agreements", "trading_partners"
   add_foreign_key "purchase_order_lines", "organizations"

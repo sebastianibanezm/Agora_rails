@@ -51,6 +51,27 @@ class OperationalWorkflowModelsTest < ActiveSupport::TestCase
     assert_includes duplicate.errors[:document_template_id], "has already been taken"
   end
 
+  test "shipment document enforces one agreement-level document per agreement and template" do
+    organization = create(:organization)
+    trading_partner = create(:trading_partner, organization: organization)
+    agreement = create(:master_agreement, organization: organization, trading_partner: trading_partner)
+    first_shipment = create(:shipment, purchase_order: create(:purchase_order, organization: organization, trading_partner: trading_partner, master_agreement: agreement))
+    second_shipment = create(:shipment, purchase_order: create(:purchase_order, organization: organization, trading_partner: trading_partner, master_agreement: agreement))
+    template = organization.document_templates.find_by!(code: "master_agreement")
+
+    duplicate = build(:shipment_document,
+                      organization: organization,
+                      shipment: second_shipment,
+                      document_template: template,
+                      documentable: agreement)
+
+    assert_not duplicate.valid?
+    assert_includes duplicate.errors[:document_template_id], "has already been taken"
+    assert_equal 1, agreement.shipment_documents.where(document_template: template).count
+    assert first_shipment.workflow_documents.exists?(document_template: template)
+    assert second_shipment.workflow_documents.exists?(document_template: template)
+  end
+
   test "shipment document rejects documentables outside the shipment hierarchy" do
     shipment = create(:shipment)
     other_line = create(:purchase_order_line, purchase_order: create(:purchase_order, organization: shipment.organization))

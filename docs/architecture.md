@@ -1,15 +1,18 @@
 # Agora Architecture
 
 Agora is a Rails 8 application for export-document workflow orchestration. The
-core design has two layers:
+core design has three layers:
 
 - **Template layer**: organization-owned definitions of what the export workflow
   should require.
+- **Contract packet/extraction layer**: uploaded master agreement PDFs,
+  extracted contract terms, human review state, and normalized schedule data.
 - **Runtime layer**: operational buyer, contract, purchase order, shipment, and
   shipment document records created during real work.
 
 This split lets each organization configure its expected document graph once,
-then instantiate that graph repeatedly for shipments.
+extract contract terms into reviewed source data, then instantiate that graph
+repeatedly for shipments.
 
 ## System Shape
 
@@ -26,6 +29,15 @@ flowchart TD
 
   Partner["TradingPartner"]
   Agreement["MasterAgreement"]
+  PacketDoc["MasterAgreementDocument"]
+  ExtractedValue["MasterAgreementExtractedValue"]
+  Party["MasterAgreementParty"]
+  Contact["MasterAgreementContact"]
+  Signer["MasterAgreementSigner"]
+  Schedule["MasterAgreementSchedule"]
+  Location["MasterAgreementDeliveryLocation"]
+  PriceLine["MasterAgreementProductPriceLine"]
+  Clause["MasterAgreementClause"]
   PO["PurchaseOrder"]
   POLine["PurchaseOrderLine"]
   Shipment["Shipment"]
@@ -46,6 +58,15 @@ flowchart TD
 
   Org --> Partner
   Partner --> Agreement
+  Agreement --> PacketDoc
+  PacketDoc --> ExtractedValue
+  PacketDoc --> Party
+  PacketDoc --> Contact
+  PacketDoc --> Signer
+  PacketDoc --> Schedule
+  Schedule --> Location
+  Schedule --> PriceLine
+  PacketDoc --> Clause
   Agreement --> PO
   PO --> POLine
   PO --> Shipment
@@ -93,6 +114,10 @@ TradingPartner
               -> ShipmentDocument
 ```
 
+`MasterAgreement#contract_file` exists for backward compatibility. New source
+PDFs should be attached through `MasterAgreementDocument` in the contract packet
+layer.
+
 Additional runtime children support the document grains defined in the template
 layer:
 
@@ -106,10 +131,55 @@ layer:
 All operational models are organization-owned and use `acts_as_tenant` where
 appropriate. Critical models also use PaperTrail.
 
+## Contract Packet And Extraction Layer
+
+Master agreement packets are first-class app data. They are not only file
+attachments.
+
+`MasterAgreementDocument` stores source PDFs and extraction metadata:
+
+- `document_kind`: `agreement`, `schedule`, `exhibit`, or `certificate`;
+- Active Storage `file`;
+- extraction status, error, extracted text, and raw extracted JSON;
+- DocuSign envelope status, subject, originator, and time zone;
+- optional effective/expiration dates and review metadata.
+
+Normalized extraction records hang off the agreement/document:
+
+- `MasterAgreementExtractedValue` for field-level output with provenance,
+  confidence, and review state;
+- `MasterAgreementParty`, `MasterAgreementContact`, and
+  `MasterAgreementSigner` for counterparties, notice/emergency contacts, and
+  DocuSign execution facts;
+- `MasterAgreementSchedule`, `MasterAgreementDeliveryLocation`, and
+  `MasterAgreementProductPriceLine` for schedule terms, designated locations,
+  and image/table-derived pricing rows;
+- `MasterAgreementClause` for clause summaries and obligations.
+
+Extraction is intentionally review-gated. AI output starts as `pending_review`.
+Only `confirmed` records can become operational source data.
+
+The main services are:
+
+- `ContractExtraction::PdfContent`: downloads the Active Storage PDF, extracts
+  text with `pdf-reader`, and adds sparse page images for image-only pages when
+  `pdftoppm` is available.
+- `ContractExtraction::AiClient`: posts a provider-agnostic JSON payload to
+  `MASTER_AGREEMENT_EXTRACTION_ENDPOINT`.
+- `ContractExtraction::ExtractMasterAgreementDocument`: persists the raw JSON
+  and normalized packet records.
+- `ContractExtraction::SyncReviewedValues`: copies confirmed contract terms into
+  `MasterAgreement` attributes and agreement-level
+  `ShipmentDocumentFieldValue` records.
+
+See `docs/master-agreement-extraction.md` for the detailed contract extraction
+workflow and payload expectations.
+
 ## Workflow Generation
 
 `CreateShipmentWorkflow.call(shipment)` instantiates active document templates
-for a shipment. The service is idempotent and safe to call multiple times.
+for a shipment workflow. The service is idempotent and safe to call multiple
+times.
 
 Document template grain maps to runtime object as follows:
 
@@ -131,8 +201,11 @@ The workflow service also:
 - skips inactive templates;
 - applies template destination filters;
 - includes `marine_insurance` only for CIF shipments;
+- creates `relacion_comercial` documents once per master agreement and reuses
+  them across all purchase orders and shipments under that agreement;
 - creates blank runtime field values for configured template fields;
-- pre-fills only unambiguous scalar values;
+- pre-fills unambiguous scalar values from operational records and confirmed
+  contract extraction data;
 - builds runtime dependency edges from template dependencies;
 - recalculates runtime document and shipment status.
 
@@ -169,6 +242,11 @@ target document field value and persists a `SourceOfTruthCheck`:
 Phase 2 does not auto-correct target document values. Checks are persisted so
 operators can review inconsistencies and decide the appropriate correction.
 
+The current seed catalog includes source-of-truth checks for confirmed contract
+terms such as payment terms, delivery terms, and delivery locations in addition
+to shipment quantities, weights, parties, HS/product descriptions, container
+data, and invoice amount.
+
 ## Tenant Boundary And Authorization
 
 Tenant routes live under `/:org_slug`. `ApplicationController` sets
@@ -187,17 +265,21 @@ layout and must not include the app's Vite assets.
 
 ## Frontend Boundary
 
-The product UI uses Inertia + React. Phase 2 tenant UI is intentionally narrow:
+The product UI uses Inertia + React. Phase 2 tenant UI is intentionally narrow
+and contract-first:
 
-- shipment index;
-- shipment detail/checklist;
+- master agreement index;
+- master agreement detail with contract packet upload/extraction/review,
+  purchase orders, shipments, shared agreement-level workflow documents,
+  schedules, contacts, delivery locations, pricing rows, and clauses;
+- shipment detail/checklist from inside the contract hierarchy;
 - document approve/waive actions;
 - source-of-truth validation trigger.
 
 Creation and editing of trading partners, agreements, purchase orders,
-shipments, lots, and containers is Avo-first in Phase 2.
-
-All user-facing text in the tenant UI should be Spanish.
+shipments, lots, and containers is Avo-first in Phase 2. Tenant UI copy is
+currently mixed English/Spanish; new screens should keep terminology consistent
+with the surrounding page until the product has a formal localization pass.
 
 ## Verification
 
@@ -207,7 +289,6 @@ Use:
 bin/rails db:migrate
 bin/rails test
 npm run build
-npx tsc --noEmit
 ```
 
 The application expects Ruby 3.3.x. On this machine, Homebrew `ruby@3.3` is

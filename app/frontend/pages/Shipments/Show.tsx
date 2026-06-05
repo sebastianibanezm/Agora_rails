@@ -1,4 +1,5 @@
 import { Link, router } from "@inertiajs/react"
+import { AppShell, PageHead } from "@/components/agora/AppShell"
 import { DocumentGraphModal } from "@/components/document_graph/DocumentGraphModal"
 import type { ShipmentGraph, SourceOfTruthCheck } from "@/components/document_graph/types"
 
@@ -46,20 +47,19 @@ export default function ShipmentsShow({ org_slug, shipment, graph, source_of_tru
     : 0
 
   return (
-    <main className="agora-doc-workspace adg-page">
-      <div className="adg-page-inner">
-        <header className="adg-topbar">
-          <div>
-            <div className="adg-eyebrow">Operaciones / Documentos</div>
-            <h1>{shipment.shipment_number}</h1>
-          </div>
-          <div className="adg-actions">
-            <Link className="adg-link" href={`/${org_slug}/shipments`}>Embarques</Link>
-            <button className="adg-action primary" type="button" onClick={validateSourceOfTruth}>
-              Validar consistencia
-            </button>
-          </div>
-        </header>
+    <AppShell orgSlug={org_slug}>
+      <PageHead
+        eyebrow="Flow · shipment checklist"
+        title={<>{shipment.shipment_number}</>}
+        metricLabel="Documents"
+        metricValue={`${shipment.document_progress.approved}/${shipment.document_progress.total}`}
+      />
+      <div className="adg-actions adg-context-actions">
+        <Link className="adg-link" href={`/${org_slug}/shipments`}>Embarques</Link>
+        <button className="adg-action primary" type="button" onClick={validateSourceOfTruth}>
+          Validar consistencia
+        </button>
+      </div>
 
         <section className="adg-metric-grid">
           <Metric label="Cliente" value={shipment.purchase_order.trading_partner_name} />
@@ -76,8 +76,7 @@ export default function ShipmentsShow({ org_slug, shipment, graph, source_of_tru
           <Metric label="Destino" value={shipment.destination_country || "Sin destino"} />
           <Metric label="Booking" value={shipment.booking_number || "Sin booking"} />
         </section>
-      </div>
-    </main>
+    </AppShell>
   )
 }
 

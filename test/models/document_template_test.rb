@@ -26,4 +26,14 @@ class DocumentTemplateTest < ActiveSupport::TestCase
     assert_not document.valid?
     assert_includes document.errors[:workflow_phase], "must belong to the same organization"
   end
+
+  test "validates array fields contain only non-empty strings" do
+    document = build(:document_template, destinations: [ "Chile", "" ], generator_roles: [ "COMEX", nil ])
+    document.receiver_roles = nil
+
+    assert_not document.valid?
+    assert_includes document.errors[:destinations], "must contain only non-empty strings"
+    assert_includes document.errors[:generator_roles], "must contain only non-empty strings"
+    assert_includes document.errors[:receiver_roles], "must be an array"
+  end
 end

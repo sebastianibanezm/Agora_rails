@@ -1,5 +1,9 @@
 class ValidateShipmentSourceOfTruth
   def self.call(shipment)
+    ServiceResult.capture { call!(shipment) }
+  end
+
+  def self.call!(shipment)
     new(shipment).call
   end
 
@@ -11,11 +15,11 @@ class ValidateShipmentSourceOfTruth
   def call
     ActsAsTenant.with_tenant(organization) do
       organization.source_of_truth_rules.includes(:source_of_truth_rule_targets, :document_field_definition).find_each do |rule|
-        authoritative_documents = shipment.shipment_documents.where(document_template: rule.authoritative_document_template)
+        authoritative_documents = shipment.workflow_documents.where(document_template: rule.authoritative_document_template)
         next if authoritative_documents.blank?
 
         rule.source_of_truth_rule_targets.each do |target|
-          target_documents = shipment.shipment_documents.where(document_template: target.document_template)
+          target_documents = shipment.workflow_documents.where(document_template: target.document_template)
           authoritative_documents.each do |authoritative_document|
             target_documents.each do |target_document|
               next if authoritative_document.id == target_document.id

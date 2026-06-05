@@ -29,12 +29,19 @@ class ShipmentDocument < ApplicationRecord
   validates :documentable_type, presence: true, inclusion: { in: DOCUMENTABLE_TYPES }
   validates :document_template_id, uniqueness: {
     scope: %i[organization_id shipment_id documentable_type documentable_id]
-  }
+  }, unless: :agreement_level?
+  validates :document_template_id, uniqueness: {
+    scope: %i[organization_id documentable_type documentable_id]
+  }, if: :agreement_level?
   validate :records_belong_to_organization
   validate :documentable_belongs_to_shipment
 
   def approved_or_waived?
     status.in?(%w[approved waived])
+  end
+
+  def agreement_level?
+    documentable_type == "MasterAgreement"
   end
 
   private

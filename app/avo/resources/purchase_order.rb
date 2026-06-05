@@ -1,5 +1,5 @@
 class Avo::Resources::PurchaseOrder < Avo::BaseResource
-  self.includes = [ :organization, :trading_partner, :master_agreement ]
+  self.includes = [ :organization, :trading_partner, :master_agreement, :purchase_order_lines, :shipments ]
 
   def fields
     field :id, as: :id

@@ -4,6 +4,6 @@
 <p>Plan: <%= @organization.plan %></p>
 <p>Users: <%= @users_count %></p>
 
-<p><%= link_to "Ver embarques", shipments_path(org_slug: params[:org_slug]) %></p>
+<p><%= link_to "Ver contratos", master_agreements_path(org_slug: params[:org_slug]) %></p>
 
 <%= button_to "Log out", destroy_login_path(org_slug: params[:org_slug]), method: :delete %>

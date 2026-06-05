@@ -155,6 +155,72 @@ export const Icon = {
       <path d="M9 6l6 6-6 6" />
     </BaseIcon>
   ),
+  layout: (props: IconProps) => (
+    <BaseIcon {...props}>
+      <rect x="4" y="4" width="7" height="7" rx="1" />
+      <rect x="13" y="4" width="7" height="7" rx="1" />
+      <rect x="4" y="13" width="7" height="7" rx="1" />
+      <rect x="13" y="13" width="7" height="7" rx="1" />
+    </BaseIcon>
+  ),
+  container: (props: IconProps) => (
+    <BaseIcon {...props}>
+      <rect x="3" y="7" width="18" height="11" rx="1.5" />
+      <path d="M7 7v11M11 7v11M15 7v11" />
+    </BaseIcon>
+  ),
+  building: (props: IconProps) => (
+    <BaseIcon {...props}>
+      <path d="M4 21V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v16" />
+      <path d="M16 9h2a2 2 0 0 1 2 2v10" />
+      <path d="M8 7h4M8 11h4M8 15h4" />
+    </BaseIcon>
+  ),
+  ship: (props: IconProps) => (
+    <BaseIcon {...props}>
+      <path d="M4 17h16l-2 4H6z" />
+      <path d="M6 17V9h9l3 8" />
+      <path d="M9 9V5h5v4" />
+    </BaseIcon>
+  ),
+  bar: (props: IconProps) => (
+    <BaseIcon {...props}>
+      <path d="M4 19V5" />
+      <path d="M4 19h18" />
+      <rect x="7" y="11" width="3" height="5" rx="1" />
+      <rect x="12" y="8" width="3" height="8" rx="1" />
+      <rect x="17" y="5" width="3" height="11" rx="1" />
+    </BaseIcon>
+  ),
+  search: (props: IconProps) => (
+    <BaseIcon {...props}>
+      <circle cx="11" cy="11" r="6" />
+      <path d="M20 20l-4.5-4.5" />
+    </BaseIcon>
+  ),
+  filter: (props: IconProps) => (
+    <BaseIcon {...props}>
+      <path d="M4 6h16" />
+      <path d="M7 12h10" />
+      <path d="M10 18h4" />
+    </BaseIcon>
+  ),
+  bell: (props: IconProps) => (
+    <BaseIcon {...props}>
+      <path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 7h18s-3 0-3-7" />
+      <path d="M10 20a2 2 0 0 0 4 0" />
+    </BaseIcon>
+  ),
+  plus: (props: IconProps) => (
+    <BaseIcon {...props}>
+      <path d="M12 5v14M5 12h14" />
+    </BaseIcon>
+  ),
+  check: (props: IconProps) => (
+    <BaseIcon {...props}>
+      <path d="M5 12.5l4.2 4.2L19 7" />
+    </BaseIcon>
+  ),
 }
 
 export function DocIcon({ type, ...props }: IconProps & { type?: string }) {

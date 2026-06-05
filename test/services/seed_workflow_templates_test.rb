@@ -6,9 +6,9 @@ class SeedWorkflowTemplatesTest < ActiveSupport::TestCase
 
     assert_equal 8, org.workflow_phases.count
     assert_equal 26, org.document_templates.count
-    assert_equal 15, org.document_field_definitions.count
+    assert_equal 35, org.document_field_definitions.count
     assert_operator org.document_template_dependencies.count, :>, 40
-    assert_equal 11, org.source_of_truth_rules.count
+    assert_equal 14, org.source_of_truth_rules.count
     assert_operator org.source_of_truth_rule_targets.count, :>, 20
   end
 

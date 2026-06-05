@@ -10,6 +10,7 @@ Agora models export operations with this hierarchy:
 ```text
 Trading Partner / Buyer
   -> Master Agreement / Contract
+      -> Contract Packet Documents / Extracted Terms
       -> Purchase Order
           -> Shipment / Embarque
               -> Shipment Documents
@@ -26,6 +27,12 @@ checklist, dependencies, field values, and source-of-truth checks.
 |---|---|
 | `TradingPartner` | Buyer or other trade partner master data. |
 | `MasterAgreement` | Contractual terms with a trading partner. |
+| `MasterAgreementDocument` | Source contract PDF, schedule, exhibit, or certificate attached to a master agreement. |
+| `MasterAgreementExtractedValue` | Field-level AI extraction output with provenance, confidence, and review status. |
+| `MasterAgreementSchedule` | Reviewed schedule terms such as payment, lead time, delivery, product category, participating companies, distributors, pallets, and unsaleables. |
+| `MasterAgreementDeliveryLocation` | Schedule delivery destination extracted from the packet. |
+| `MasterAgreementProductPriceLine` | Schedule pricing row extracted from text or image tables. |
+| `MasterAgreementParty`, `MasterAgreementContact`, `MasterAgreementSigner`, `MasterAgreementClause` | Parties, contacts, DocuSign execution data, and clause obligations extracted from packet documents. |
 | `PurchaseOrder` | Commercial order under a master agreement. |
 | `PurchaseOrderLine` | Product/SKU detail for a purchase order. |
 | `Shipment` | Operational embarque under a purchase order. |
@@ -35,6 +42,39 @@ checklist, dependencies, field values, and source-of-truth checks.
 | `ShipmentDocumentFieldValue` | Runtime value for a template-defined field. |
 | `ShipmentDocumentDependency` | Runtime prerequisite edge between documents. |
 | `SourceOfTruthCheck` | Persisted result of field consistency validation. |
+
+## Contract Packet Lifecycle
+
+The contract packet lifecycle sits before and beside shipment workflow
+generation:
+
+1. A user uploads one or more PDFs to the master agreement detail page.
+2. The upload creates `MasterAgreementDocument` records with a `document_kind`
+   such as `agreement`, `schedule`, `exhibit`, or `certificate`.
+3. A user queues extraction. `MasterAgreementExtractionJob` calls
+   `ContractExtraction::ExtractMasterAgreementDocument`.
+4. The extraction service stores raw extracted JSON plus normalized parties,
+   contacts, signers, schedules, delivery locations, pricing lines, clauses, and
+   extracted values.
+5. Extracted records start as `pending_review`.
+6. A user confirms or corrects extracted fields, price lines, or the whole
+   document batch.
+7. `ContractExtraction::SyncReviewedValues` syncs confirmed terms into
+   `MasterAgreement` attributes and agreement-level workflow document fields.
+
+Only confirmed extraction data is operationally authoritative. Pending AI output
+is visible for review but must not drive downstream documents.
+
+Common confirmed terms include:
+
+- customer/vendor legal names;
+- contract and schedule dates;
+- payment terms;
+- delivery terms and designated locations;
+- lead time;
+- product/category, specifications reference, case pack, UOM, unit cost;
+- pallet and unsaleables requirements;
+- recall contacts and compliance obligations.
 
 ## Shipment Creation Lifecycle
 
@@ -57,6 +97,12 @@ That service:
 The service is idempotent. Re-running it should not duplicate documents, field
 values, or dependency edges.
 
+When a configured field matches a confirmed contract term, the field value is
+prefilled from the master agreement extraction layer. Examples include payment
+terms, delivery terms, delivery locations, lead time, specifications reference,
+pallet requirements, unsaleables terms, recall contacts, and compliance
+requirements.
+
 ## Lot And Container Lifecycle
 
 Some document templates are generated per child record:
@@ -73,7 +119,7 @@ shipment object has cached associations.
 
 | Grain | Example templates | Runtime scope |
 |---|---|---|
-| `relacion_comercial` | Master Agreement | One document per shipment agreement. |
+| `relacion_comercial` | Master Agreement | One shared document per master agreement/template. |
 | `po` | Purchase Order, production program entry | One document per shipment purchase order. |
 | `sku_producto` | Product Spec / Packaging / Label | One document per PO line. |
 | `embarque` | Shipping Instruction, Booking, Invoice, Packing List, BL | One document per shipment. |
@@ -158,14 +204,27 @@ The service persists `SourceOfTruthCheck` records with:
 Validation is observational in Phase 2. It records mismatches but does not
 rewrite field values.
 
+The current seed catalog includes agreement/schedule source-of-truth fields in
+addition to shipment operational fields. For example, the `master_agreement`
+template is authoritative for payment terms, delivery terms, and delivery
+locations where those values appear in commercial invoices, documentary sets,
+payment reconciliation, shipping instructions, BL matrices, or bills of lading.
+
 ## Avo Versus Tenant UI
 
 Phase 2 deliberately splits responsibility:
 
 - **Avo** owns CRUD for trading partners, agreements, purchase orders, purchase
   order lines, shipments, lots, containers, and low-level runtime records.
-- **Tenant UI** owns shipment visibility and document operations:
-  - shipment list;
+- **Tenant UI** starts from the master agreement and owns document operations:
+  - master agreement list;
+  - master agreement detail with contract packet upload, extraction, review,
+    purchase orders, and shipments;
+  - extracted field correction and confirmation;
+  - schedule, contact, signer, delivery location, clause, and pricing row
+    visibility;
+  - delivered unit cost correction and confirmation for extracted pricing rows;
+  - shared contract-document status;
   - shipment detail/checklist;
   - approve document;
   - waive document;
@@ -184,6 +243,10 @@ These are known hardening areas rather than architecture defects:
   misconfiguration.
 - Pundit scopes should remain organization-filtered as defense in depth.
 - Shipment index should stay paginated as data volume grows.
+- AI extraction should remain provider-agnostic and mocked in tests.
+- Image-only pricing tables depend on the AI endpoint and optional local page
+  rendering support; pending rows require human review before use.
 - Tenant CRUD for operational records is intentionally deferred.
 
 See `docs/architecture.md` for the system-wide model and service overview.
+See `docs/master-agreement-extraction.md` for extraction-specific behavior.

@@ -35,8 +35,12 @@ class ShipmentsController < ApplicationController
   def validate_source_of_truth
     authorize @shipment, :validate_source_of_truth?
 
-    ValidateShipmentSourceOfTruth.call(@shipment)
-    redirect_to shipment_path(org_slug: params[:org_slug], id: @shipment), notice: "Validaciones actualizadas."
+    result = ValidateShipmentSourceOfTruth.call(@shipment)
+    if result.success?
+      redirect_to shipment_path(org_slug: params[:org_slug], id: @shipment), notice: "Validaciones actualizadas."
+    else
+      redirect_to shipment_path(org_slug: params[:org_slug], id: @shipment), alert: result.error_message
+    end
   end
 
   private
@@ -88,8 +92,9 @@ class ShipmentsController < ApplicationController
     end
 
     def shipment_payload(shipment)
-      documents_count = shipment.shipment_documents.size
-      approved_count = shipment.shipment_documents.count(&:approved_or_waived?)
+      shipment_documents = shipment.shipment_documents.to_a
+      documents_count = shipment_documents.size
+      approved_count = shipment_documents.count(&:approved_or_waived?)
       purchase_order = shipment.purchase_order
 
       {
@@ -115,9 +120,6 @@ class ShipmentsController < ApplicationController
 
     def documents_payload
       @shipment.shipment_documents
-               .includes(:document_template,
-                         { shipment_document_field_values: :document_field_definition },
-                         incoming_dependencies: { prerequisite_shipment_document: :document_template })
                .sort_by { |document| [ document.document_template.step_number || 999, document.document_template.name ] }
                .map do |document|
         {

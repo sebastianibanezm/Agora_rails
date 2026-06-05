@@ -22,6 +22,6 @@ class ShipmentLot < ApplicationRecord
     end
 
     def refresh_workflow
-      CreateShipmentWorkflow.call(shipment)
+      CreateShipmentWorkflow.call!(shipment)
     end
 end

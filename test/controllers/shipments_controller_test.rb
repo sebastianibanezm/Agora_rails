@@ -60,6 +60,14 @@ class ShipmentsControllerTest < ActionDispatch::IntegrationTest
     assert_operator @shipment.source_of_truth_checks.count, :>, previous_count
   end
 
+  test "expired sessions are not resumed" do
+    @user.sessions.update_all(expires_at: 1.minute.ago)
+
+    get shipments_path(org_slug: @org.subdomain)
+
+    assert_redirected_to new_login_path(org_slug: @org.subdomain)
+  end
+
   private
 
     def grant(resource, action)

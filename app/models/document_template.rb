@@ -43,6 +43,7 @@ class DocumentTemplate < ApplicationRecord
   validates :obligation, inclusion: { in: OBLIGATIONS }
   validates :criticality, inclusion: { in: CRITICALITIES }
   validates :grain, inclusion: { in: GRAINS }
+  validate :array_fields_are_string_arrays
   validate :workflow_phase_belongs_to_organization
 
   private
@@ -52,5 +53,19 @@ class DocumentTemplate < ApplicationRecord
       return if workflow_phase.organization_id == organization_id
 
       errors.add(:workflow_phase, "must belong to the same organization")
+    end
+
+    def array_fields_are_string_arrays
+      %i[destinations generator_roles receiver_roles].each do |attribute|
+        values = public_send(attribute)
+        unless values.is_a?(Array)
+          errors.add(attribute, "must be an array")
+          next
+        end
+
+        next if values.all? { |value| value.is_a?(String) && value.present? }
+
+        errors.add(attribute, "must contain only non-empty strings")
+      end
     end
 end

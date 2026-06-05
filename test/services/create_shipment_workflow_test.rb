@@ -22,6 +22,22 @@ class CreateShipmentWorkflowTest < ActiveSupport::TestCase
     assert_equal counts, [ shipment.shipment_documents.count, shipment.shipment_document_dependencies.count ]
   end
 
+  test "agreement-grain documents are canonical across shipments under the same agreement" do
+    organization = create(:organization)
+    trading_partner = create(:trading_partner, organization: organization)
+    agreement = create(:master_agreement, organization: organization, trading_partner: trading_partner)
+    first_order = create(:purchase_order, organization: organization, trading_partner: trading_partner, master_agreement: agreement)
+    second_order = create(:purchase_order, organization: organization, trading_partner: trading_partner, master_agreement: agreement)
+    first_shipment = create(:shipment, purchase_order: first_order)
+    second_shipment = create(:shipment, purchase_order: second_order)
+    template = organization.document_templates.find_by!(code: "master_agreement")
+
+    assert_equal 1, agreement.shipment_documents.where(document_template: template).count
+    assert first_shipment.workflow_documents.exists?(document_template: template)
+    assert second_shipment.workflow_documents.exists?(document_template: template)
+    assert_not second_shipment.shipment_documents.exists?(document_template: template)
+  end
+
   test "rolls back generated records when dependency building fails" do
     shipment = create(:shipment)
     runtime_dependencies_for(shipment).destroy_all
@@ -29,12 +45,23 @@ class CreateShipmentWorkflowTest < ActiveSupport::TestCase
     shipment.shipment_documents.destroy_all
 
     with_failing_dependency_builder do
-      assert_raises(ActiveRecord::RecordInvalid) { CreateShipmentWorkflow.call(shipment) }
+      assert_raises(ActiveRecord::RecordInvalid) { CreateShipmentWorkflow.call!(shipment) }
     end
 
     assert_equal 0, shipment.shipment_documents.count
     assert_equal 0, shipment.shipment_document_dependencies.count
     assert_equal 0, shipment.organization.shipment_document_field_values.joins(:shipment_document).where(shipment_documents: { shipment_id: shipment.id }).count
+  end
+
+  test "call returns a failed service result when workflow generation fails" do
+    shipment = create(:shipment)
+
+    with_failing_dependency_builder do
+      result = CreateShipmentWorkflow.call(shipment)
+
+      assert result.failure?
+      assert_instance_of ActiveRecord::RecordInvalid, result.error
+    end
   end
 
   test "adding lots and containers generates child-grain documents" do
@@ -64,11 +91,11 @@ class CreateShipmentWorkflowTest < ActiveSupport::TestCase
     end
 
     def with_failing_dependency_builder
-      original_call = BuildShipmentDocumentDependencies.method(:call)
-      BuildShipmentDocumentDependencies.define_singleton_method(:call) { |_shipment| raise ActiveRecord::RecordInvalid }
+      original_call = BuildShipmentDocumentDependencies.method(:call!)
+      BuildShipmentDocumentDependencies.define_singleton_method(:call!) { |_shipment| raise ActiveRecord::RecordInvalid }
       yield
     ensure
-      BuildShipmentDocumentDependencies.define_singleton_method(:call, original_call)
+      BuildShipmentDocumentDependencies.define_singleton_method(:call!, original_call)
     end
 end
 
@@ -88,7 +115,7 @@ class CreateShipmentWorkflowConcurrencyTest < ActiveSupport::TestCase
     threads = 2.times.map do
       Thread.new do
         ActiveRecord::Base.connection_pool.with_connection do
-          CreateShipmentWorkflow.call(Shipment.find(shipment.id))
+          CreateShipmentWorkflow.call!(Shipment.find(shipment.id))
         rescue => error
           errors << error
         end

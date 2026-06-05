@@ -151,7 +151,7 @@ export function DocumentGraphModal({ graph, onApprove, onWaive }: DocumentGraphM
   }
 
   return (
-    <div className={`agora-doc-workspace${selection ? " panel-open" : ""}`}>
+    <div className={`adg-graph-workspace${selection ? " panel-open" : ""}`}>
       <div className="adg-workspace-main">
         <div className="adg-graph-shell">
           <div className="adg-graph-toolbar">

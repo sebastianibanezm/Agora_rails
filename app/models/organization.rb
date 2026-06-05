@@ -19,6 +19,15 @@ class Organization < ApplicationRecord
   has_many :document_templates, dependent: :destroy
   has_many :document_field_definitions, dependent: :destroy
   has_many :workflow_phases, dependent: :destroy
+  has_many :master_agreement_documents, dependent: :destroy
+  has_many :master_agreement_extracted_values, dependent: :destroy
+  has_many :master_agreement_parties, dependent: :destroy
+  has_many :master_agreement_contacts, dependent: :destroy
+  has_many :master_agreement_signers, dependent: :destroy
+  has_many :master_agreement_schedules, dependent: :destroy
+  has_many :master_agreement_delivery_locations, dependent: :destroy
+  has_many :master_agreement_product_price_lines, dependent: :destroy
+  has_many :master_agreement_clauses, dependent: :destroy
 
   has_paper_trail
 

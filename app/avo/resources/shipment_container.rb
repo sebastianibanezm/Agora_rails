@@ -1,5 +1,5 @@
 class Avo::Resources::ShipmentContainer < Avo::BaseResource
-  self.includes = [ :organization, :shipment ]
+  self.includes = [ :organization, :shipment, :shipment_documents ]
 
   def fields
     field :id, as: :id

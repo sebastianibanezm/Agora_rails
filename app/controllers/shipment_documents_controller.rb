@@ -4,30 +4,36 @@ class ShipmentDocumentsController < ApplicationController
   def update
     authorize @shipment_document
 
-    @shipment_document.update!(shipment_document_params)
-    update_field_values
-    RecalculateShipmentDocumentStatus.call(@shipment_document)
-    redirect_to shipment_path(org_slug: params[:org_slug], id: @shipment_document.shipment), notice: "Documento actualizado."
+    ActiveRecord::Base.transaction do
+      @shipment_document.update!(shipment_document_params)
+      update_field_values
+      RecalculateShipmentDocumentStatus.call!(@shipment_document)
+    end
+    redirect_back fallback_location: shipment_path(org_slug: params[:org_slug], id: @shipment_document.shipment), notice: "Documento actualizado."
   end
 
   def approve
     authorize @shipment_document, :approve?
 
-    @shipment_document.update!(status: "approved", completed_at: Time.current)
-    RecalculateShipmentDocumentStatus.call(@shipment_document)
-    redirect_to shipment_path(org_slug: params[:org_slug], id: @shipment_document.shipment), notice: "Documento aprobado."
+    ActiveRecord::Base.transaction do
+      @shipment_document.update!(status: "approved", completed_at: Time.current)
+      RecalculateShipmentDocumentStatus.call!(@shipment_document)
+    end
+    redirect_back fallback_location: shipment_path(org_slug: params[:org_slug], id: @shipment_document.shipment), notice: "Documento aprobado."
   end
 
   def waive
     authorize @shipment_document, :waive?
 
-    @shipment_document.update!(
-      status: "waived",
-      waiver_reason: params[:waiver_reason].presence || "Excepcion operacional",
-      completed_at: Time.current
-    )
-    RecalculateShipmentDocumentStatus.call(@shipment_document)
-    redirect_to shipment_path(org_slug: params[:org_slug], id: @shipment_document.shipment), notice: "Documento eximido."
+    ActiveRecord::Base.transaction do
+      @shipment_document.update!(
+        status: "waived",
+        waiver_reason: params[:waiver_reason].presence || "Excepcion operacional",
+        completed_at: Time.current
+      )
+      RecalculateShipmentDocumentStatus.call!(@shipment_document)
+    end
+    redirect_back fallback_location: shipment_path(org_slug: params[:org_slug], id: @shipment_document.shipment), notice: "Documento eximido."
   end
 
   private

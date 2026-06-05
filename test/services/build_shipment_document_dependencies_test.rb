@@ -40,6 +40,25 @@ class BuildShipmentDocumentDependenciesTest < ActiveSupport::TestCase
     ).exists?
   end
 
+  test "allows shipment documents to depend on shared master agreement documents" do
+    organization = create(:organization)
+    trading_partner = create(:trading_partner, organization: organization)
+    agreement = create(:master_agreement, organization: organization, trading_partner: trading_partner)
+    first_order = create(:purchase_order, organization: organization, trading_partner: trading_partner, master_agreement: agreement)
+    second_order = create(:purchase_order, organization: organization, trading_partner: trading_partner, master_agreement: agreement)
+    create(:shipment, purchase_order: first_order)
+    second_shipment = create(:shipment, purchase_order: second_order)
+    master_template = organization.document_templates.find_by!(code: "master_agreement")
+    purchase_order_template = organization.document_templates.find_by!(code: "purchase_order")
+    shared_master_document = agreement.shipment_documents.find_by!(document_template: master_template)
+    purchase_order_document = second_shipment.shipment_documents.find_by!(document_template: purchase_order_template)
+
+    assert second_shipment.shipment_document_dependencies.exists?(
+      shipment_document: purchase_order_document,
+      prerequisite_shipment_document: shared_master_document
+    )
+  end
+
   test "preserves waived runtime dependency status" do
     shipment = create(:shipment)
     dependency = shipment.shipment_document_dependencies.first

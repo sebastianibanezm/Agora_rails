@@ -5,6 +5,10 @@ class RecalculateShipmentDocumentStatus
   TERMINAL_SHIPMENT_STATUSES = %w[shipped post_zarpe closed cancelled].freeze
 
   def self.call(shipment_document, visited: Set.new)
+    ServiceResult.capture { call!(shipment_document, visited: visited) }
+  end
+
+  def self.call!(shipment_document, visited: Set.new)
     new(shipment_document, visited: visited).call
   end
 
@@ -51,14 +55,14 @@ class RecalculateShipmentDocumentStatus
         dependent = dependency.shipment_document
         next if dependent.status.in?(TERMINAL_DOCUMENT_STATUSES)
 
-        RecalculateShipmentDocumentStatus.call(dependent, visited: visited)
+        RecalculateShipmentDocumentStatus.call!(dependent, visited: visited)
       end
     end
 
     def refresh_shipment_status
       return if shipment.status.in?(TERMINAL_SHIPMENT_STATUSES)
 
-      required_documents = shipment.shipment_documents.joins(:document_template).where(document_templates: { obligation: "obligatorio" })
+      required_documents = shipment.workflow_documents.joins(:document_template).where(document_templates: { obligation: "obligatorio" })
       next_status = required_documents.exists? && required_documents.all?(&:approved_or_waived?) ? "ready_to_ship" : "documents_pending"
       shipment.update_columns(status: next_status, updated_at: Time.current) if shipment.status != next_status
     end

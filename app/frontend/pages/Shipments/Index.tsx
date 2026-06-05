@@ -1,4 +1,5 @@
 import { Link } from "@inertiajs/react"
+import { AppShell, PageHead } from "@/components/agora/AppShell"
 import "@/components/document_graph/styles.css"
 
 interface Shipment {
@@ -35,17 +36,13 @@ interface Props {
 
 export default function ShipmentsIndex({ org_slug, shipments, pagination }: Props) {
   return (
-    <main className="agora-doc-workspace adg-page">
-      <div className="adg-page-inner">
-        <header className="adg-topbar">
-          <div>
-            <div className="adg-eyebrow">Document handling</div>
-            <h1>Embarques y documentos</h1>
-          </div>
-          <div className="adg-actions">
-            <a className="adg-link" href={`/${org_slug}`}>Volver al panel</a>
-          </div>
-        </header>
+    <AppShell orgSlug={org_slug}>
+      <PageHead
+        eyebrow="Document handling · shipment workflows"
+        title={<>Every shipment, every <em>release</em> behind it.</>}
+        metricLabel="Shipments"
+        metricValue={String(pagination.total_count)}
+      />
 
         <section className="adg-card-grid">
           {shipments.map((shipment) => {
@@ -101,8 +98,7 @@ export default function ShipmentsIndex({ org_slug, shipments, pagination }: Prop
             )}
           </div>
         </nav>
-      </div>
-    </main>
+    </AppShell>
   )
 }
 
